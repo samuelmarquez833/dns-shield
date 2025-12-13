@@ -1,0 +1,15 @@
+{
+  "name": "dns_shield",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "demo": "node demo.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "dgram": "^1.0.1"
+  }
+}
