@@ -1,4 +1,7 @@
 const dgram = require('node:dgram');
+const {decide} = require('./core/normalize');
+const rules = require('./data/rules.json');
+
 const { off } = require('node:process');
 const server = dgram.createSocket('udp4');
 
@@ -50,7 +53,11 @@ server.on("message", (msg, rinfo) => {
   }
 
   const domain = labels.join(".");
-  console.log("DOMAIN:", domain);
+  const response = decide(domain, rules);
+  console.log(response);
+
+  console.log("porno DOMAIN:", domain);
+
 
   // ===== QTYPE / QCLASS =====
   const qtype  = msg.readUInt16BE(offset);
