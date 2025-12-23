@@ -1,4 +1,8 @@
 
+
+const dns = require('dns');
+const { type } = require('os');
+
 const normalizeDomain = (domain) => {   
     if(typeof domain !== 'string') {
         throw new Error('Domain must be a string');
@@ -39,52 +43,39 @@ const validatePattern = (pattern) => {
     return pattern;
 }
 
-//para que uso rules?
 
-const decide = (domain, rules) => {
-    const goodDomain = normalizeDomain(domain)
-    
-    if (rules.block.includes(goodDomain)){        
-        const dnsServfailResponse = Buffer.from([
-        0x12, 0x34,       // ID (igual que la query)
-        0x81, 0x82,       // FLAGS: response + RD + SERVFAIL(2)
-        0x00, 0x01,       // QDCOUNT = 1
-        0x00, 0x00,       // ANCOUNT = 0
-        0x00, 0x00,       // NSCOUNT = 0
-        0x00, 0x00,       // ARCOUNT = 0
 
-        // QUESTION (copiada idéntica)
-        0x07, 0x79, 0x6f, 0x75, 0x74, 0x75, 0x62, 0x65, // "youtube"
-        0x03, 0x63, 0x6f, 0x6d,                         // "com"
-        0x00,                                           // end
-        0x00, 0x01,                                     // QTYPE = A
-        0x00, 0x01                                      // QCLASS = IN
-        ]);
 
+
+
+
+const decide = async (id, flags, qdcount, qname, qtype, qclass, rules) => {
+    const goodDomain = normalizeDomain(qname);
+
+    if (rules.block.includes(goodDomain)){ 
         const response = {
-            dnsServfailResponse: dnsServfailResponse,
             status: 'blocked, vete alachingada',
             domain: goodDomain
         }
         console.log(response);
         return response;
     } else {
+
+        let dgram = require('dgram');
+        let s = dgram.createSocket('udp4');
+        s.send(Buffer.from('abc'), 8080, 'localhost'); 
+
         const response = {
             status: 'allowed, esta bien',
             domain: goodDomain
         }
+
         console.log(response);
         return response;
     }
 
 }
 
-
-/*
-const makeEvent = (decision, clientId) => {
-    console.log('time');
-
-}*/
 
 
 
