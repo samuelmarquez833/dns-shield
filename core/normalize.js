@@ -49,28 +49,28 @@ const validatePattern = (pattern) => {
 
 
 
-const decide = async (id, flags, qdcount, qname, qtype, qclass, rules) => {
+const decide = async (qname, rules) => {
     const goodDomain = normalizeDomain(qname);
 
     if (rules.block.includes(goodDomain)){ 
         const response = {
-            status: 'blocked, vete alachingada',
+            status: false,
+            message: 'blocked, vete alachingada',
             domain: goodDomain
         }
-        console.log(response);
         return response;
+    
     } else {
-
+        /*
         let dgram = require('dgram');
         let s = dgram.createSocket('udp4');
-        s.send(Buffer.from('abc'), 8080, 'localhost'); 
+        s.send(Buffer.from('abc'), 8080, 'localhost'); */
 
         const response = {
-            status: 'allowed, esta bien',
+            status: true,
+            message: 'allowed, esta bien',
             domain: goodDomain
         }
-
-        console.log(response);
         return response;
     }
 

@@ -29,3 +29,6 @@ client.send(dnsQuery, 5533, "127.0.0.1", (err) => {
   else console.log("Enviado");
   client.close();
 });
+
+
+
