@@ -1,41 +1,21 @@
 const dgram = require('node:dgram');
+const server = dgram.createSocket('udp4');
+const client = dgram.createSocket("udp4");
 const {decide} = require('./core/normalize');
 const rules = require('./data/rules.json');
 
-const server = dgram.createSocket('udp4');
-
-const client = dgram.createSocket("udp4");
-
-
-
-
-
-
-
-
-
-
-
-
-
-server.on('error', (err) => {
-  console.error(`server error:\n${err.stack}`);
-  server.close();
-});
-
-
-
-
-
-
-
 
 server.on("message", async (msg, rinfo) => {
+  const clientAddress = rinfo.address;
+  const clientPort = rinfo.port;
 
-
-  const id = msg.readUInt16BE(0);
+  /*const id = msg.readUInt16BE(0);
   const flags = msg.readUInt16BE(2);
   const qdcount = msg.readUInt16BE(4);
+  const ancount = msg.readUInt16BE(6);
+  const nscount = msg.readUInt16BE(8);
+  const arcount = msg.readUInt16BE(10);*/
+
   let offset = 12;               
   const labels = [];
 
@@ -48,29 +28,59 @@ server.on("message", async (msg, rinfo) => {
     }
 
     const label = msg.toString(
-      "ascii",
-      offset + 1,
-      offset + 1 + len
+    "ascii",
+    offset + 1,
+    offset + 1 + len
     );
 
     labels.push(label);
     offset += 1 + len;           
   }
+
+
   const qname = labels.join(".");
-  const qtype  = msg.readUInt16BE(offset);
-  const qclass = msg.readUInt16BE(offset + 2);
-
-
-
-
-
-
-
   const veredicto = await decide(qname, rules);
-  console.log(veredicto);
+
 
   if (veredicto.status === false){
     console.log(`Bloqueado: ${qname}`);
+
+    const resp = Buffer.alloc(12); 
+
+    // id - lo dejamos igual
+    resp[0] = msg[0];
+    resp[1] = msg[1];
+
+    //flags de bloqueo
+    resp[2] = 0x81;
+    resp[3] = 0x85;
+
+    // QDCOUNT  - lo dejamos igual
+    resp[4] = msg[4];
+    resp[5] = msg[5];
+
+    //contadores de answers en cero - Bloqueo minimalista: no hay respuestas.
+    resp[6] = 0; resp[7] = 0;    
+    resp[8] = 0; resp[9] = 0;    
+    resp[10] = 0; resp[11] = 0;  
+
+    let newOffset = 12;
+
+    while (true) {
+      const len = msg[newOffset];  
+      newOffset += 1;              
+      if (len === 0) break; 
+      newOffset += len;           
+    }
+
+    const questionEnd = newOffset + 4; 
+    const question = msg.slice(12, questionEnd);
+    const denied = Buffer.concat([resp, question]);
+
+    server.send(denied, clientPort, clientAddress, (err) => {
+      if (err) console.error(err);
+      else console.log("Enviado al cliente real cuando es bloqueado");
+    });  
 
 
 
@@ -79,153 +89,24 @@ server.on("message", async (msg, rinfo) => {
 
     client.send(msg, 53, "1.1.1.1", (err) => {
       if (err) console.error(err);
-      else console.log("Enviado");
+      else console.log("Enviado al dns real");
     });
 
     client.on("message", (msg, rinfo) => {
-      console.log("Respuesta recibida de:", rinfo.address);
-      console.log(msg.buffer);
+      console.log("Respuesta recibida del dns real o", rinfo.address);
 
-
-          
-      const id = msg.readUInt16BE(0);
-      const flags = msg.readUInt16BE(2);
-      const qdcount = msg.readUInt16BE(4);
-      let offset = 12;               
-      const labels = [];
-
-      while (true) {
-        const len = msg.readUInt8(offset);
-
-        if (len === 0) {             
-          offset += 1;
-          break;
-        }
-
-        const label = msg.toString(
-          "ascii",
-          offset + 1,
-          offset + 1 + len
-        );
-
-        labels.push(label);
-        offset += 1 + len;           
-      }
-      const qname = labels.join(".");
-      const qtype  = msg.readUInt16BE(offset);
-      offset += 2
-      const qclass = msg.readUInt16BE(offset);
-      offset += 2;
-
-
-
-
-      const name = msg.readUInt16BE(offset);
-      offset += 2;
-
-
-
-
-      const type = msg.readUInt16BE(offset); offset += 2;
-      const clase = msg.readUInt16BE(offset); offset += 2;
-      const ttl = msg.readUInt32BE(offset); offset += 4;
-      const rdlength = msg.readUInt16BE(offset); offset += 2;
-
-      let rdata;
-
-
-      // no quiero ponerlo en funciones voy a dejarlo todo junto, al menos por ahora, es para entender y asi
-      if (type === 1 && rdlength === 4) {
-        rdata = msg.readUInt32BE(offset);
-        console.log(`${msg.readUInt8(offset)}.${msg.readUInt8(offset+1)}.${msg.readUInt8(offset+2)}.${msg.readUInt8(offset+3)}`);
-
-        offset += rdlength;
+      /*if (type === 1 && rdlength === 4) {
       } else if (type === 28 && rdlength === 16) {
-        rdata = msg.subarray(offset, offset + 16); // Buffer de 16 bytes
-
-        const parts = [];
-        for (let i = 0; i < 16; i += 2) {
-          parts.push(msg.readUInt16BE(offset + i).toString(16));
-        }
-        const todo = parts.join(":"); 
-        console.log(todo);
-
-        offset += rdlength;
-
-
       } else if (type === 5) {
+      }*/
 
-        /*
-        www.example.com NO tiene IP propia.
-        Su nombre real es example.cdn.net.
-        Pregunta ahora por ESE nombre.
-        */
-
-
-        rdata = msg.subarray(offset, offset + rdlength); // bytes crudos del nombre
-        offset += rdlength;
-
-        // todavia no quiero hacer la interpretacion de este tipo
-
-
-      }
-      
-
-
-/*
-      console.log(`name: ${name}`);
-      console.log(`type: ${type}`);
-      console.log(`clase: ${clase}`);
-      console.log(`ttl: ${ttl}`);
-      console.log(`rdlength: ${rdlength}`);
-      console.log(`rdate: ${rdata}`);*/
-
+      server.send(msg, clientPort, clientAddress, (err) => {
+        if (err) console.error(err);
+        else console.log("Enviado al cliente real cuando es permitido");
+      });
     });
   }
-  
-  
-
-
-
-
-
-
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 server.on('listening', () => {
@@ -234,8 +115,10 @@ server.on('listening', () => {
 });
 
 
+server.on('error', (err) => {
+  console.error(`server error:\n${err.stack}`);
+  server.close();
+});
 
 
-
-server.bind(5533, '127.0.0.1');
-// Prints: server listening 0.0.0.0:41234
+server.bind(53, '127.0.0.1');

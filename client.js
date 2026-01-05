@@ -11,8 +11,8 @@ const dnsQuery = Buffer.from([
   0x00, 0x00, // NSCOUNT
   0x00, 0x00, // ARCOUNT
 
-  // QNAME: amazon.com
-  0x06, 0x61, 0x6d, 0x61, 0x7a, 0x6f, 0x6e, // "amazon"
+  // QNAME: youtube.com
+  0x07, 0x79, 0x6f, 0x75, 0x74, 0x75, 0x62, 0x65, // "youtube"
   0x03, 0x63, 0x6f, 0x6d,                         // "com"
   0x00,                                           // end of name
 
@@ -27,8 +27,11 @@ const dnsQuery = Buffer.from([
 client.send(dnsQuery, 5533, "127.0.0.1", (err) => {
   if (err) console.error(err);
   else console.log("Enviado");
-  client.close();
 });
 
 
 
+client.on("message", (msg, rinfo) => {
+  console.log(`Received ${msg.length} bytes from ${rinfo.address}:${rinfo.port}`);
+  console.log(msg);
+});
