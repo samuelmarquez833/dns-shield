@@ -5,41 +5,49 @@ const {decide} = require('./core/normalize');
 const rules = require('./data/rules.json');
 
 
+process.on("warning", (w) => {
+  console.error("⚠️ WARNING:", w.name);
+  console.error(w.message);
+  console.error(w.stack);
+});
+
+
 server.on("message", async (msg, rinfo) => {
   const clientAddress = rinfo.address;
   const clientPort = rinfo.port;
 
-  /*const id = msg.readUInt16BE(0);
-  const flags = msg.readUInt16BE(2);
-  const qdcount = msg.readUInt16BE(4);
-  const ancount = msg.readUInt16BE(6);
-  const nscount = msg.readUInt16BE(8);
-  const arcount = msg.readUInt16BE(10);*/
-
-  let offset = 12;               
   const labels = [];
 
-  while (true) {
-    const len = msg.readUInt8(offset);
+  try{    
+    let offset = 12;               
+    while (true) {
+      const len = msg.readUInt8(offset);
 
-    if (len === 0) {             
-      offset += 1;
-      break;
+      if (len === 0) {             
+        offset += 1;
+        break;
+      }
+
+      const label = msg.toString(
+      "ascii",
+      offset + 1,
+      offset + 1 + len
+      );
+
+      labels.push(label);
+      offset += 1 + len;           
     }
-
-    const label = msg.toString(
-    "ascii",
-    offset + 1,
-    offset + 1 + len
-    );
-
-    labels.push(label);
-    offset += 1 + len;           
+  } catch (err){
+    console.error("Error parsing QNAME:", err);
+    return;
   }
 
-
+  
   const qname = labels.join(".");
   const veredicto = await decide(qname, rules);
+  console.log(veredicto);
+
+
 
 
   if (veredicto.status === false){
@@ -79,7 +87,6 @@ server.on("message", async (msg, rinfo) => {
 
     server.send(denied, clientPort, clientAddress, (err) => {
       if (err) console.error(err);
-      else console.log("Enviado al cliente real cuando es bloqueado");
     });  
 
 
@@ -89,22 +96,26 @@ server.on("message", async (msg, rinfo) => {
 
     client.send(msg, 53, "1.1.1.1", (err) => {
       if (err) console.error(err);
-      else console.log("Enviado al dns real");
     });
 
-    client.on("message", (msg, rinfo) => {
-      console.log("Respuesta recibida del dns real o", rinfo.address);
-
+    
+    client.on("message", (msg) => {
+      //console.log("Respuesta recibida del dns real o", rinfo.address);
       /*if (type === 1 && rdlength === 4) {
       } else if (type === 28 && rdlength === 16) {
       } else if (type === 5) {
       }*/
-
       server.send(msg, clientPort, clientAddress, (err) => {
         if (err) console.error(err);
-        else console.log("Enviado al cliente real cuando es permitido");
       });
     });
+
+
+
+
+
+
+
   }
 });
 

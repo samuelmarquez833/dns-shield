@@ -2,6 +2,7 @@
 
 const dns = require('dns');
 const { type } = require('os');
+const { execPath } = require('process');
 
 const normalizeDomain = (domain) => {   
     if(typeof domain !== 'string') {
@@ -49,23 +50,29 @@ const validatePattern = (pattern) => {
 
 
 
-const decide = async (qname, rules) => {
-    const goodDomain = normalizeDomain(qname);
+const decide = (qname, rules) => {
 
-    if (rules.block.includes(goodDomain)){ 
+    const goodDomain = normalizeDomain(qname);
+    let isIt = true;
+    
+    rules.block.forEach( badName => {
+    
+        if(goodDomain.includes(badName)){
+            isIt = false;
+        }
+    });
+
+
+
+    if (!isIt){ 
         const response = {
             status: false,
             message: 'blocked, vete alachingada',
             domain: goodDomain
         }
         return response;
-    
-    } else {
-        /*
-        let dgram = require('dgram');
-        let s = dgram.createSocket('udp4');
-        s.send(Buffer.from('abc'), 8080, 'localhost'); */
 
+    } else {
         const response = {
             status: true,
             message: 'allowed, esta bien',
@@ -73,6 +80,7 @@ const decide = async (qname, rules) => {
         }
         return response;
     }
+    
 
 }
 
